@@ -7,14 +7,14 @@ var keyUp;
 var keyDown;
 var keySpace;
 
-game.init = function(){
-};      
+game.init = function () {
+};
 
-game.preload = function() {
-  phaserEngine.load.image('player','assets/alienGreen.png'); // this will be the sprite of the active player
-  phaserEngine.load.image('otherPlayer','assets/alienPink.png'); // this will be the sprite of the other player
-  phaserEngine.load.image('playerBeam','assets/laserGreen3.png');
-  phaserEngine.load.image('enemyBeam','assets/laserPink3.png');
+game.preload = function () {
+  phaserEngine.load.image('player', 'assets/alienGreen.png'); // this will be the sprite of the active player
+  phaserEngine.load.image('otherPlayer', 'assets/alienPink.png'); // this will be the sprite of the other player
+  phaserEngine.load.image('playerBeam', 'assets/laserGreen3.png');
+  phaserEngine.load.image('enemyBeam', 'assets/laserPink3.png');
 };
 
 function onRightDown() {
@@ -53,7 +53,7 @@ function onSpaceDown() {
   Client.onSpaceDown();
 }
 
-game.create = function(){
+game.create = function () {
   game.playerMap = {};
   game.lasers = {};
 
@@ -79,18 +79,18 @@ game.create = function(){
   Client.askNewPlayer();
 };
 
-game.addNewPlayer = function(id,x,y){
-  var sprite = phaserEngine.add.sprite(x,y,'player');
+game.addNewPlayer = function (id, x, y) {
+  var sprite = phaserEngine.add.sprite(x, y, 'player');
   sprite.anchor.setTo(0.5);
   game.playerMap[id] = sprite;
 };
 
-game.removePlayer = function(id){
+game.removePlayer = function (id) {
   game.playerMap[id].destroy();
   delete game.playerMap[id];
 }
 
-game.updatePlayer = function(id,x,y) {
+game.updatePlayer = function (id, x, y) {
   if (!game.playerMap[id])
     return;
 
@@ -98,14 +98,13 @@ game.updatePlayer = function(id,x,y) {
   game.playerMap[id].position.y = y;
 }
 
-game.spawnLaser = function(data) {
+game.spawnLaser = function (data) {
   var sprite = phaserEngine.add.sprite(data.xPos, data.yPos, 'playerBeam');
   sprite.anchor.setTo(0.5);
   game.lasers[data.id] = sprite;
-
 }
 
-game.updateLaser = function(id,x,invalid) {
+game.updateLaser = function (id, x, invalid) {
   if (!game.lasers[id])
     return;
 
@@ -119,7 +118,7 @@ game.updateLaser = function(id,x,invalid) {
   game.lasers[id].position.x = x
 }
 
-game.onHit = function(laserID, playerID, newX, newY) {
+game.onHit = function (laserID, playerID, newX, newY) {
   game.lasers[laserID].destroy();
   delete game.lasers[laserID];
 
@@ -129,4 +128,3 @@ game.onHit = function(laserID, playerID, newX, newY) {
 
 phaserEngine.state.add('game', game);
 phaserEngine.state.start('game');
-

@@ -50,13 +50,12 @@ io.on('connection', function (socket) {
     socket.broadcast.emit('newplayer', socket.player);
     socket.emit('allplayers', getAllPlayers());
 
-    socket.on('disconnect',function(){
-      io.emit('remove',socket.player.id);
+    socket.on('disconnect', function () {
+      io.emit('remove', socket.player.id);
     })
 
-    socket.on('onSpaceDown', function() {
-      if (socket.player.canFire == false)
-      { 
+    socket.on('onSpaceDown', function () {
+      if (socket.player.canFire == false) {
         return
       }
 
@@ -72,23 +71,23 @@ io.on('connection', function (socket) {
       io.sockets.emit('spawnLaser', theLaser);
     })
 
-    socket.on('onRightDown', function() {
+    socket.on('onRightDown', function () {
       socket.player.xAccel += 1;
     })
 
-    socket.on('onRightUp', function() {
+    socket.on('onRightUp', function () {
       socket.player.xAccel -= 1;
     })
 
-    socket.on('onLeftDown', function() {
+    socket.on('onLeftDown', function () {
       socket.player.xAccel += -1;
     })
 
-    socket.on('onLeftUp', function() {
+    socket.on('onLeftUp', function () {
       socket.player.xAccel -= -1;
     })
 
-    socket.on('onUpDown', function() {
+    socket.on('onUpDown', function () {
       if (socket.player.yPos >= groundLevel) {
         socket.player.yVel -= jumpPower;
       }
@@ -125,13 +124,13 @@ function calculateLaserSpeed(player) {
     return -laserSpeed
   else if (player.xVel > 0)
     return laserSpeed
-  else 
+  else
     return -laserSpeed
 }
 
 function update() {
   var players = getAllPlayers()
-  players.forEach( p => {
+  players.forEach(p => {
     if (p.xAccel)
       p.xVel += p.xAccel * moveAcceleration;
     else
@@ -155,26 +154,24 @@ function update() {
       p.yPos = groundLevel;
       p.yVel = 0;
     }
-
-
   })
 
-  server.lasers.forEach( l => {
+  server.lasers.forEach(l => {
     l.xPos += l.xVel;
 
-    players.forEach( p => {
-      if (l.xPos + laserRadius + playerRadius > p.xPos 
+    players.forEach(p => {
+      if (l.xPos + laserRadius + playerRadius > p.xPos
         && l.xPos < p.xPos + laserRadius + playerRadius
-        && l.yPos + laserRadius + playerRadius > p.yPos 
+        && l.yPos + laserRadius + playerRadius > p.yPos
         && l.yPos < p.yPos + laserRadius + playerRadius
         && l.ownerId != p.id) { //A hit occured
-          l.invalid = true
-          players[l.ownerId].canFire = true;
-          var newX = randomInt(100, 900)
-          var newY = randomInt(100, 500)
-          p.xPos = newX;
-          p.yPos = newY;
-          io.emit('onHit', l.id, p.id, newX, newY)
+        l.invalid = true
+        players[l.ownerId].canFire = true;
+        var newX = randomInt(100, 900)
+        var newY = randomInt(100, 500)
+        p.xPos = newX;
+        p.yPos = newY;
+        io.emit('onHit', l.id, p.id, newX, newY)
       }
     })
 
@@ -189,7 +186,7 @@ function update() {
 
   var newLasers = [];
 
-  server.lasers.forEach( l => {
+  server.lasers.forEach(l => {
     if (!l.invalid) {
       newLasers.push(l)
     }
