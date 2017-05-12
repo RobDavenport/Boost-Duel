@@ -5,7 +5,9 @@ var keyRight;
 var keyLeft;
 var keyUp;
 var keyDown;
-var keySpace;
+var keyBoost;
+var keyMelee;
+var keyShoot;
 
 game.init = function () {
 };
@@ -15,6 +17,9 @@ game.preload = function () {
   phaserEngine.load.image('otherPlayer', 'assets/alienPink.png'); // this will be the sprite of the other player
   phaserEngine.load.image('playerBeam', 'assets/laserGreen3.png');
   phaserEngine.load.image('enemyBeam', 'assets/laserPink3.png');
+
+  phaserEngine.load.audio('jump', 'assets/jump.wav')
+  phaserEngine.load.audio('shoot', 'assets/shot.wav')
 };
 
 function onRightDown() {
@@ -49,13 +54,28 @@ function onDownUp() {
   Client.onDownUp();
 }
 
-function onSpaceDown() {
-  Client.onSpaceDown();
+function onBoostDown() {
+  Client.onBoostDown();
+}
+
+function onBoostUp() {
+  Client.onBoostUp();
+}
+
+function onMeleeDown() {
+  Client.onMeleeDown();
+}
+
+function onShootDown() {
+  Client.onShootDown();
 }
 
 game.create = function () {
   game.playerMap = {};
   game.lasers = {};
+
+  jumpSound = phaserEngine.add.audio('jump');
+  shootSound = phaserEngine.add.audio('shoot');
 
   keyRight = phaserEngine.input.keyboard.addKey(Phaser.Keyboard.RIGHT)
   keyRight.onDown.add(onRightDown, this);
@@ -73,8 +93,15 @@ game.create = function () {
   keyDown.onDown.add(onDownDown, this);
   keyDown.onUp.add(onDownUp, this);
 
-  keySpace = phaserEngine.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR)
-  keySpace.onDown.add(onSpaceDown, this);
+  keyShoot = phaserEngine.input.keyboard.addKey(Phaser.Keyboard.C)
+  keyShoot.onDown.add(onShootDown, this);
+
+  keyMelee = phaserEngine.input.keyboard.addKey(Phaser.Keyboard.X)
+  keyMelee.onDown.add(onMeleeDown, this);
+
+  keyBoost = phaserEngine.input.keyboard.addKey(Phaser.Keyboard.Z)
+  keyBoost.onDown.add(onBoostDown, this);
+  keyBoost.onUp.add(onBoostUp, this);
 
   Client.askNewPlayer();
 };
@@ -90,12 +117,27 @@ game.removePlayer = function (id) {
   delete game.playerMap[id];
 }
 
-game.updatePlayer = function (id, x, y) {
-  if (!game.playerMap[id])
+game.updatePlayer = function (playerData) {
+  if (!game.playerMap[playerData.id])
     return;
 
-  game.playerMap[id].position.x = x;
-  game.playerMap[id].position.y = y;
+  var p = game.playerMap[playerData.id];
+
+  //We are jumping
+  if (p.state == 'idle' && p.ground == true && 
+      playerData.state == 'jump' && playerData.ground == false) {
+      jumpSound.play();
+  }
+
+  //We started shooting
+  if (playerData.state == 'shoot' && p.state != 'shoot') {
+    shootSound.play();
+  }
+
+  p.position.x = playerData.xPos;
+  p.position.y = playerData.yPos;
+  p.state = playerData.state;
+  p.ground = playerData.ground;
 }
 
 game.spawnLaser = function (data) {
@@ -109,7 +151,6 @@ game.updateLaser = function (id, x, invalid) {
     return;
 
   if (invalid) {
-    console.log("delete laser")
     game.lasers[id].destroy();
     delete game.lasers[id];
     return;

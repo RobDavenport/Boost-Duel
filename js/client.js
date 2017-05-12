@@ -37,8 +37,20 @@ Client.onDownUp = function () {
   Client.socket.emit('onDownUp');
 }
 
-Client.onSpaceDown = function () {
-  Client.socket.emit('onSpaceDown');
+Client.onShootDown = function () {
+  Client.socket.emit('onShootDown');
+}
+
+Client.onBoostDown = function() {
+  Client.socket.emit('onBoostDown');
+}
+
+Client.onBoostUp = function() {
+  Client.socket.emit('onBoostUp');
+}
+
+Client.onMeleeDown = function() {
+  Client.socket.emit('onMeleeDown');
 }
 
 Client.socket.on('newplayer', function (data) {
@@ -57,7 +69,7 @@ Client.socket.on('remove', function (id) {
 
 Client.socket.on('updatePlayers', function (data) {
   for (var i = 0; i < data.length; i++) {
-    game.updatePlayer(data[i].id, data[i].xPos, data[i].yPos)
+    game.updatePlayer(data[i])
   }
 });
 
