@@ -9,6 +9,8 @@ var keyBoost;
 var keyMelee;
 var keyShoot;
 
+var dashTiming = 200; //in miliseconds
+
 game.init = function () {
 };
 
@@ -18,8 +20,9 @@ game.preload = function () {
   phaserEngine.load.image('playerBeam', 'assets/laserGreen3.png');
   phaserEngine.load.image('enemyBeam', 'assets/laserPink3.png');
 
-  phaserEngine.load.audio('jump', 'assets/jump.wav')
-  phaserEngine.load.audio('shoot', 'assets/shot.wav')
+  phaserEngine.load.audio('jump', 'assets/jump.wav');
+  phaserEngine.load.audio('shoot', 'assets/shot.wav');
+  phaserEngine.load.audio('dash', 'assets/dash.wav');
 };
 
 function onRightDown() {
@@ -52,10 +55,17 @@ function onDownDown() {
 
 function onDownUp() {
   Client.onDownUp();
-}
+}  
 
 function onBoostDown() {
-  Client.onBoostDown();
+  currentBoost = new Date().getTime();
+
+  if ((currentBoost - lastBoost) <= dashTiming)
+    Client.onDash();
+  else
+    Client.onBoostDown();
+  
+  lastBoost = currentBoost;
 }
 
 function onBoostUp() {
@@ -74,8 +84,11 @@ game.create = function () {
   game.playerMap = {};
   game.lasers = {};
 
+  lastBoost = new Date().getTime();
+
   jumpSound = phaserEngine.add.audio('jump');
   shootSound = phaserEngine.add.audio('shoot');
+  dashSound = phaserEngine.add.audio('dash');
 
   keyRight = phaserEngine.input.keyboard.addKey(Phaser.Keyboard.RIGHT)
   keyRight.onDown.add(onRightDown, this);
@@ -132,6 +145,11 @@ game.updatePlayer = function (playerData) {
   //We started shooting
   if (playerData.state == 'shoot' && p.state != 'shoot') {
     shootSound.play();
+  }
+
+  //We started dashing
+  if (playerData.state == 'dash' && p.state != 'dash') {
+    dashSound.play();
   }
 
   p.position.x = playerData.xPos;

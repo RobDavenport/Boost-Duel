@@ -24,7 +24,7 @@ var gravity = 0.35;
 var friction = 0.90;
 
 var laserSpeed = 10;
-var laserRadius = 64;
+var laserRadius = 32;
 
 var playerRadius = 33;
 var playerHP = 3;
@@ -43,10 +43,18 @@ var playerMaxAmmo = 400;
 var playerShotCost = 100;
 var playerReloadRate = 1;
 
-var playerShootAnimFrames = 36;
-var playerShootSpawnFrame = 18;
+var playerShootAnimFrames = 42;
+var playerShootSpawnFrame = 24;
 var playerMaxShootMoveSpeed = 2;
 var playerShootGravity = gravity / 6;
+
+var playerDashAnimLockFrames = 12;
+var playerDashSpeed = 8;
+var playerDashMaxSpeed = 8.5;
+var playerDashNormalizeSpeed = (playerDashSpeed / Math.SQRT2);
+var playerDashInitialCost = 15;
+var playerDashAirMoveAcceleration = 0.1;
+var playerDashAirMoveNormalizeAcceleration = (playerDashAirMoveAcceleration / Math.SQRT2);
 
 server.lastLaserID = 0;
 server.lasers = [];
@@ -67,10 +75,14 @@ io.on('connection', function (socket) {
       xVel: 0,
       yVel: 0,
       xAccel: 0,
+      yAccel: 0,
+      xAxis: 0,
+      yAxis: 0,
       getGravity: true, //should be affected by gravity or not
       state: 'idle',
       animLock: 0,
       ground: false,
+      holdBoost: false
     };
 
     socket.broadcast.emit('newplayer', socket.player);
@@ -96,6 +108,7 @@ io.on('connection', function (socket) {
     })
 
     socket.on('onBoostDown', function () {
+      socket.player.holdBoost = true;
       if (socket.player.animLock == 0) {
         if (socket.player.state == 'idle') {
           socket.player.state = 'jump';
@@ -110,10 +123,33 @@ io.on('connection', function (socket) {
     })
 
     socket.on('onBoostUp', function () {
-      if (!socket.player.animLock) {
-        if (socket.player.state == 'idle' || socket.player.state == 'jump' || socket.player.state == 'dash') {
+      socket.player.holdBoost = false;
+      if (socket.player.animLock == 0) {
+        if (socket.player.state == 'idle' || socket.player.state == 'jump') {
           socket.player.state = 'idle';
           socket.player.getGravity = true;
+        }
+      }
+    })
+
+    socket.on('onDash', function() {
+      if (socket.player.energy >= playerDashInitialCost) {
+        socket.player.holdBoost = true;
+        socket.player.state = 'dash';
+        socket.player.getGravity = false;
+        socket.player.animLock = playerDashAnimLockFrames;
+        socket.player.energy -= playerDashInitialCost;
+
+        if (socket.player.xAxis == 0 && socket.player.yAxis == 0) {
+          socket.player.yVel = -playerDashSpeed;
+        }
+        else 
+        if (socket.player.xAxis == 0 || socket.player.yAxis == 0) {
+          socket.player.xVel = socket.player.xAxis * playerDashSpeed;
+          socket.player.yVel = socket.player.yAxis * -playerDashSpeed;
+        } else {
+          socket.player.xVel = socket.player.xAxis * playerDashNormalizeSpeed;
+          socket.player.yVel = socket.player.yAxis * -playerDashNormalizeSpeed;
         }
       }
     })
@@ -123,35 +159,35 @@ io.on('connection', function (socket) {
     })
 
     socket.on('onRightDown', function () {
-      socket.player.xAccel += 1;
+      socket.player.xAxis += 1;
     })
 
     socket.on('onRightUp', function () {
-      socket.player.xAccel -= 1;
+      socket.player.xAxis -= 1;
     })
 
     socket.on('onLeftDown', function () {
-      socket.player.xAccel += -1;
+      socket.player.xAxis += -1;
     })
 
     socket.on('onLeftUp', function () {
-      socket.player.xAccel -= -1;
+      socket.player.xAxis -= -1;
     })
 
     socket.on('onUpDown', function () {
-      //TODO
+      socket.player.yAxis += 1;
     })
 
     socket.on('onUpUp', function () {
-      //TODO
+      socket.player.yAxis -= 1;
     })
 
     socket.on('onDownDown', function () {
-      //TODO
+      socket.player.yAxis += -1;
     })
 
     socket.on('onDownUp', function () {
-      //TODO
+      socket.player.yAxis -= -1;
     })
   });
 });
@@ -209,7 +245,12 @@ function update() {
     else if (p.state == 'shoot')
       updateShoot(p);
 
-    updatePosition(p);
+    checkGroundCollision(p);
+
+    if (p.energy <= 0 && p.animLock == 0) {
+      p.state = 'idle';
+      p.getGravity = true;
+    }
 
     p.energy = Math.min(p.energy, playerMaxEnergy)
 
@@ -255,9 +296,30 @@ function update() {
   })
 }
 
+function checkGroundCollision(p) {
+  //Collision Horizontal Check vs edges
+  if (p.xPos + playerRadius >= 1280) {
+    p.xPos = 1280 - playerRadius;
+    p.xVel = 0;
+  }
+  else if (p.xPos - playerRadius <= 0) {
+    p.xPos = playerRadius
+    p.xVel = 0;
+  }
+
+  if (p.yPos >= groundLevel) {
+    p.yPos = groundLevel;
+    p.yVel = 0;
+    p.ground = true;
+    if (p.animLock == 0)
+      p.state = 'idle';
+  }
+}
+
 //Update the player positions
 function updatePosition(p) {
   //Update X Positions
+  p.xAccel = p.xAxis;
 
   var accel = 0;
 
@@ -274,34 +336,16 @@ function updatePosition(p) {
   p.xVel = clampMovespeed(p.xVel, playerMaxMoveSpeed)
   p.xPos += p.xVel
 
-  //Collision Horizontal Check vs edges
-  if (p.xPos + playerRadius >= 1280) {
-    p.xPos = 1280 - playerRadius;
-    p.xVel = 0;
-  }
-  else if (p.xPos - playerRadius <= 0) {
-    p.xPos = playerRadius
-    p.xVel = 0;
-  }
-
   //Handle Vertical Movement
   p.yPos += p.yVel
-
+  
   if (p.getGravity) //Only if they should receive gravity
     p.yVel += gravity;
-
-  if (p.yPos >= groundLevel) {
-    p.yPos = groundLevel;
-    p.yVel = 0;
-    p.ground = true;
-    if (p.animLock == 0)
-      p.state = 'idle';
-  }
 }
 
 //Handle updates in "idle"
 function updateIdle(p) {
-
+  updatePosition(p);
 }
 
 //Handle updates in "jump"
@@ -311,15 +355,35 @@ function updateJump(p) {
 
   p.energy -= playerJumpHoldCost;
 
-  if (p.energy <= 0) {
-    p.state = 'idle';
-    p.getGravity = true;
-  }
+  updatePosition(p);
 }
 
 //Handle updates in "dash"
 function updateDash(p) {
+  if (p.animLock > 0)
+    p.animLock -= 1;
+  
+  if (p.holdBoost) {
+    p.energy -= playerDashHoldCost;
+    if (p.xAxis == 0 || p.yAxis == 0) {
+      p.xAccel = p.xAxis * playerDashAirMoveAcceleration;
+      p.yAccel = p.yAxis * -playerDashAirMoveAcceleration;
+    } else {
+      p.xAccel = p.xAxis * playerDashAirMoveNormalizeAcceleration;
+      p.yAccel = p.yAxis * -playerDashAirMoveNormalizeAcceleration;
+    }
+    p.xVel += p.xAccel;
+    p.yVel += p.yAccel;
 
+    p.xVel = clampMovespeed(p.xVel, playerDashMaxSpeed);
+    p.yVel = clampMovespeed(p.yVel, playerDashMaxSpeed);
+
+  } else if (p.holdBoost == false && p.animLock == 0) {
+    p.state = 'idle';
+    p.getGravity = true;
+  }
+    p.xPos += p.xVel;
+    p.yPos += p.yVel;
 }
 
 function updateShoot(p) {
@@ -344,7 +408,8 @@ function updateShoot(p) {
     p.state = 'idle';
     p.getGravity = true;
   }
-}
 
+  updatePosition(p);
+}
 
 setInterval(update, 17);

@@ -45,6 +45,10 @@ Client.onBoostDown = function() {
   Client.socket.emit('onBoostDown');
 }
 
+Client.onDash = function() {
+  Client.socket.emit('onDash');
+}
+
 Client.onBoostUp = function() {
   Client.socket.emit('onBoostUp');
 }
