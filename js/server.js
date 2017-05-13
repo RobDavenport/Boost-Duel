@@ -19,7 +19,7 @@ server.listen(8081, function () { // Listens to port 8081
 
 server.lastPlayerID = 0;
 var groundLevel = 650;
-var gravity = 0.35;
+var gravity = 0.30;
 
 var friction = 0.90;
 
@@ -39,8 +39,8 @@ var playerEnergyRefilRate = 4;
 var playerJumpHoldCost = 1;
 var playerDashHoldCost = 1;
 
-var playerMaxAmmo = 400;
-var playerShotCost = 100;
+var playerMaxAmmo = 1000;
+var playerShotCost = 200;
 var playerReloadRate = 1;
 
 var playerShootAnimFrames = 42;
@@ -93,10 +93,10 @@ io.on('connection', function (socket) {
     })
 
     socket.on('onShootDown', function () {
-      if (socket.player.ammo < playerShotCost || 
-          socket.player.animLock != 0 ||
-          socket.player.state == 'melee' || 
-          socket.player.state == 'shoot') {
+      if (socket.player.ammo < playerShotCost ||
+        socket.player.animLock != 0 ||
+        socket.player.state == 'melee' ||
+        socket.player.state == 'shoot') {
         return;
       }
 
@@ -132,7 +132,7 @@ io.on('connection', function (socket) {
       }
     })
 
-    socket.on('onDash', function() {
+    socket.on('onDash', function () {
       if (socket.player.energy >= playerDashInitialCost) {
         socket.player.holdBoost = true;
         socket.player.state = 'dash';
@@ -143,14 +143,14 @@ io.on('connection', function (socket) {
         if (socket.player.xAxis == 0 && socket.player.yAxis == 0) {
           socket.player.yVel = -playerDashSpeed;
         }
-        else 
-        if (socket.player.xAxis == 0 || socket.player.yAxis == 0) {
-          socket.player.xVel = socket.player.xAxis * playerDashSpeed;
-          socket.player.yVel = socket.player.yAxis * -playerDashSpeed;
-        } else {
-          socket.player.xVel = socket.player.xAxis * playerDashNormalizeSpeed;
-          socket.player.yVel = socket.player.yAxis * -playerDashNormalizeSpeed;
-        }
+        else
+          if (socket.player.xAxis == 0 || socket.player.yAxis == 0) {
+            socket.player.xVel = socket.player.xAxis * playerDashSpeed;
+            socket.player.yVel = socket.player.yAxis * -playerDashSpeed;
+          } else {
+            socket.player.xVel = socket.player.xAxis * playerDashNormalizeSpeed;
+            socket.player.yVel = socket.player.yAxis * -playerDashNormalizeSpeed;
+          }
       }
     })
 
@@ -236,7 +236,7 @@ function update() {
     p.ammo += playerReloadRate;
     p.ammo = Math.min(p.ammo, playerMaxAmmo)
 
-    if (p.state == 'idle') 
+    if (p.state == 'idle')
       updateIdle(p);
     else if (p.state == 'jump')
       updateJump(p);
@@ -253,47 +253,46 @@ function update() {
     }
 
     p.energy = Math.min(p.energy, playerMaxEnergy)
-
-    //Update all lasers
-    server.lasers.forEach(l => {
-      l.xPos += l.xVel;
-
-      //Collision check vs players
-      players.forEach(p => {
-        if (l.xPos + laserRadius + playerRadius > p.xPos
-          && l.xPos < p.xPos + laserRadius + playerRadius
-          && l.yPos + laserRadius + playerRadius > p.yPos
-          && l.yPos < p.yPos + laserRadius + playerRadius
-          && l.ownerId != p.id) { //A hit occured
-          l.invalid = true
-          players[l.ownerId].canFire = true;
-          var newX = randomInt(100, 900)
-          var newY = randomInt(100, 500)
-          p.xPos = newX;
-          p.yPos = newY;
-          io.emit('onHit', l.id, p.id, newX, newY)
-        }
-      })
-
-      if (l.xPos > 1300 || l.xPos < -20) {
-        l.invalid = true
-      }
-    })
-
-    io.emit('updatePlayers', players);
-    io.emit('updateLasers', server.lasers)
-
-    //Cleanup
-    var newLasers = [];
-
-    server.lasers.forEach(l => {
-      if (!l.invalid) {
-        newLasers.push(l)
-      }
-    })
-
-    server.lasers = newLasers;
   })
+
+  //Update all lasers
+  server.lasers.forEach(l => {
+    l.xPos += l.xVel;
+
+    //Collision check vs players
+    players.forEach(p => {
+      if (l.xPos + laserRadius + playerRadius > p.xPos
+        && l.xPos < p.xPos + laserRadius + playerRadius
+        && l.yPos + laserRadius + playerRadius > p.yPos
+        && l.yPos < p.yPos + laserRadius + playerRadius
+        && l.ownerId != p.id) { //A hit occured
+        l.invalid = true
+        var newX = randomInt(100, 900)
+        var newY = randomInt(100, 500)
+        p.xPos = newX;
+        p.yPos = newY;
+        io.emit('onHit', l.id, p.id, newX, newY)
+      }
+    })
+
+    if (l.xPos > 1300 || l.xPos < -20) {
+      l.invalid = true
+    }
+  })
+
+  io.emit('updatePlayers', players);
+  io.emit('updateLasers', server.lasers)
+
+  //Cleanup
+  var newLasers = [];
+
+  server.lasers.forEach(l => {
+    if (!l.invalid) {
+      newLasers.push(l)
+    }
+  })
+
+  server.lasers = newLasers;
 }
 
 function checkGroundCollision(p) {
@@ -338,7 +337,7 @@ function updatePosition(p) {
 
   //Handle Vertical Movement
   p.yPos += p.yVel
-  
+
   if (p.getGravity) //Only if they should receive gravity
     p.yVel += gravity;
 }
@@ -362,7 +361,7 @@ function updateJump(p) {
 function updateDash(p) {
   if (p.animLock > 0)
     p.animLock -= 1;
-  
+
   if (p.holdBoost) {
     p.energy -= playerDashHoldCost;
     if (p.xAxis == 0 || p.yAxis == 0) {
@@ -382,8 +381,8 @@ function updateDash(p) {
     p.state = 'idle';
     p.getGravity = true;
   }
-    p.xPos += p.xVel;
-    p.yPos += p.yVel;
+  p.xPos += p.xVel;
+  p.yPos += p.yVel;
 }
 
 function updateShoot(p) {

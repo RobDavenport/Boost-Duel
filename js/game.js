@@ -10,6 +10,9 @@ var keyMelee;
 var keyShoot;
 
 var dashTiming = 200; //in miliseconds
+var textOffset = 30;
+
+var style = { font: "11px Arial", fill: "#ffffff", align: "center"};
 
 game.init = function () {
 };
@@ -82,6 +85,8 @@ function onShootDown() {
 
 game.create = function () {
   game.playerMap = {};
+  game.uiEnergy = {};
+  game.uiAmmo = {};
   game.lasers = {};
 
   lastBoost = new Date().getTime();
@@ -121,17 +126,31 @@ game.create = function () {
 
 game.addNewPlayer = function (id, x, y) {
   var sprite = phaserEngine.add.sprite(x, y, 'player');
+  var energyText = phaserEngine.add.text(x, y + textOffset, '', style);
+  var ammoText = phaserEngine.add.text(x, y - textOffset, '', style)
+
   sprite.anchor.setTo(0.5);
+  energyText.anchor.setTo(0.5);
+  ammoText.anchor.setTo(0.5);
+
   game.playerMap[id] = sprite;
+  game.uiEnergy[id] = energyText;
+  game.uiAmmo[id] = ammoText;
 };
 
 game.removePlayer = function (id) {
   game.playerMap[id].destroy();
   delete game.playerMap[id];
+
+  game.uiEnergy[id].destroy();
+  delete game.uiEnergy[id];
+
+  game.uiAmmo[id].destroy();
+  delete game.uiAmmo[id];
 }
 
 game.updatePlayer = function (playerData) {
-  if (!game.playerMap[playerData.id])
+  if (!game.playerMap || !game.playerMap[playerData.id])
     return;
 
   var p = game.playerMap[playerData.id];
@@ -156,6 +175,14 @@ game.updatePlayer = function (playerData) {
   p.position.y = playerData.yPos;
   p.state = playerData.state;
   p.ground = playerData.ground;
+
+  game.uiEnergy[playerData.id].text = playerData.energy;
+  game.uiEnergy[playerData.id].position.x = playerData.xPos;
+  game.uiEnergy[playerData.id].position.y = playerData.yPos + textOffset;
+
+  game.uiAmmo[playerData.id].text = playerData.ammo;
+  game.uiAmmo[playerData.id].position.x = playerData.xPos;
+  game.uiAmmo[playerData.id].position.y = playerData.yPos - textOffset;
 }
 
 game.spawnLaser = function (data) {
